@@ -1,0 +1,8 @@
+gh repo create projeto-modulo2 --private --source . --remote origin --push
+
+git init
+git branch -M main
+git add .
+git commit -m "feat: projeto modulo 2"
+git remote add origin https://github.com/MatC-L/projeto-modulo2.git
+git push -u origin main
