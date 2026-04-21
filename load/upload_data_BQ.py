@@ -1,94 +1,101 @@
+import os
+import sys
+from pathlib import Path
+
 import pandas as pd
 from google.cloud import bigquery
+from google.cloud.exceptions import NotFound
+
+# Raiz do projeto no path para importar extract.visualizar_dados
+PROJETO_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJETO_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJETO_ROOT))
+
+from extract.visualizar_dados import (  # noqa: E402
+    padronizar_colunas,
+    preparar_vendas_para_grafico,
+)
 
 # =========================================================
 # CONFIGURACAO
 # =========================================================
-PROJECT_ID = "root-isotope-490823-b1"
-DATASET_ID = "clamed_iqvia_dataset"
+PROJECT_ID = os.environ.get("GCP_PROJECT_ID", "projeto-modulo2")
+# Staging (bronze): alinhado a transform/create_and_transform_dataset.sql opcao B
+DATASET_ID = os.environ.get("BQ_DATASET_ID", "staging_modulo2")
+BQ_LOCATION = os.environ.get("BQ_LOCATION", "US")
 
-FILE_FILIAL = (
-    r"c:\Users\mateu\OneDrive\Documentos\GitHub\CienciaDeDados\Curso\modulo2"
-    r"\mini-projeto\samples\filial-brick_sample.xlsx"
-)
-FILE_MS = (
-    r"c:\Users\mateu\OneDrive\Documentos\GitHub\CienciaDeDados\Curso\modulo2"
-    r"\mini-projeto\samples\MS_12_2022_sample.xlsx"
-)
+RAW_DIR = PROJETO_ROOT / "raw"
 
-TABLE_STG_FILIAL = f"{PROJECT_ID}.{DATASET_ID}.stg_filial_brick_raw"
-TABLE_STG_MS = f"{PROJECT_ID}.{DATASET_ID}.stg_ms_raw"
+FILE_FILIAL = RAW_DIR / "dim_filial.csv"
+FILE_PRODUTO = RAW_DIR / "dim_produto.csv"
+FILE_VENDAS = RAW_DIR / "fato_vendas.csv"
 
-client = bigquery.Client(project=PROJECT_ID)
+TABLE_STG_FILIAL = f"{PROJECT_ID}.{DATASET_ID}.stg_dim_filial"
+TABLE_STG_PRODUTO = f"{PROJECT_ID}.{DATASET_ID}.stg_dim_produto"
+TABLE_STG_VENDAS = f"{PROJECT_ID}.{DATASET_ID}.stg_fato_vendas"
 
-# =========================================================
-# 1) LEITURA DOS ARQUIVOS
-# =========================================================
-df_filial_raw = pd.read_excel(FILE_FILIAL)
-df_ms_raw = pd.read_excel(FILE_MS)
 
-# =========================================================
-# 2) NORMALIZACAO PARA STAGING RAW
-# =========================================================
-df_filial_raw.columns = (
-    df_filial_raw.columns.astype(str)
-    .str.strip()
-    .str.lower()
-    .str.replace(" ", "_", regex=False)
-    .str.replace(".", "", regex=False)
-    .str.replace("-", "_", regex=False)
-    .str.replace("/", "_", regex=False)
-)
-df_ms_raw.columns = (
-    df_ms_raw.columns.astype(str)
-    .str.strip()
-    .str.lower()
-    .str.replace(" ", "_", regex=False)
-    .str.replace(".", "", regex=False)
-    .str.replace("-", "_", regex=False)
-    .str.replace("/", "_", regex=False)
-)
+# Cria cliente BigQuery para o projeto configurado.
+def criar_cliente_bq():
+    return bigquery.Client(project=PROJECT_ID)
 
-# Ajusta nome da coluna de filial para cod_filial
-if "c�d_filial" in df_filial_raw.columns:
-    df_filial_raw = df_filial_raw.rename(columns={"c�d_filial": "cod_filial"})
-elif "cód_filial" in df_filial_raw.columns:
-    df_filial_raw = df_filial_raw.rename(columns={"cód_filial": "cod_filial"})
-elif "cod_filial" not in df_filial_raw.columns:
-    second_col = df_filial_raw.columns[1]
-    df_filial_raw = df_filial_raw.rename(columns={second_col: "cod_filial"})
 
-# Ajusta nomes do MS para staging esperado pelo transform.sql
-df_ms_raw = df_ms_raw.rename(
-    columns={
-        "tipo_informacao_si_bandeira_concorrente_unidade": "vol_concorrente_indep",
-        "tipo_informacao_so_bandeira_concorrente_unidade": "vol_concorrente_rede",
-        "tipo_informacao_so_bandeira_preco_popular_unidade": "vol_clamed_pp",
-    }
-)
+# Garante que o conjunto de dados existe; cria na primeira execucao.
+def garantir_conjunto_dados(client, project_id, dataset_id, location):
+    dataset_ref = f"{project_id}.{dataset_id}"
+    try:
+        client.get_dataset(dataset_ref)
+        print(f"Conjunto de dados ja existe: {dataset_ref}")
+    except NotFound:
+        dataset = bigquery.Dataset(dataset_ref)
+        dataset.location = location
+        client.create_dataset(dataset)
+        print(f"Conjunto de dados criado: {dataset_ref} (local: {location})")
 
-# Mantem somente colunas necessarias para a transformacao no BigQuery
-df_stg_filial = df_filial_raw[["brick", "cod_filial"]].copy()
-df_stg_ms = df_ms_raw[
-    [
-        "brick",
-        "ean",
-        "cod_prod_catarinense",
-        "vol_concorrente_indep",
-        "vol_concorrente_rede",
-        "vol_clamed_pp",
-    ]
-].copy()
 
-# =========================================================
-# 3) UPLOAD STAGING RAW PARA BIGQUERY
-# =========================================================
-job_config = bigquery.LoadJobConfig(write_disposition="WRITE_TRUNCATE")
+# Le os tres CSVs brutos (caminhos relativos ao projeto; padronizacao no extract).
+def ler_csvs_raw():
+    df_filial_raw = pd.read_csv(FILE_FILIAL)
+    df_produto_raw = pd.read_csv(FILE_PRODUTO)
+    df_vendas_raw = pd.read_csv(FILE_VENDAS)
+    return df_filial_raw, df_produto_raw, df_vendas_raw
 
-client.load_table_from_dataframe(df_stg_filial, TABLE_STG_FILIAL, job_config=job_config).result()
-print(f"OK -> {TABLE_STG_FILIAL}: {len(df_stg_filial)} linhas")
 
-client.load_table_from_dataframe(df_stg_ms, TABLE_STG_MS, job_config=job_config).result()
-print(f"OK -> {TABLE_STG_MS}: {len(df_stg_ms)} linhas")
+# Envia os tres dataframes para BigQuery com truncate.
+def carregar_tabelas_bigquery(client, df_filial, df_produto, df_vendas):
+    job_config = bigquery.LoadJobConfig(write_disposition="WRITE_TRUNCATE")
 
-print("Carga RAW finalizada com sucesso.")
+    client.load_table_from_dataframe(
+        df_filial, TABLE_STG_FILIAL, job_config=job_config
+    ).result()
+    print(f"OK -> {TABLE_STG_FILIAL}: {len(df_filial)} linhas")
+
+    client.load_table_from_dataframe(
+        df_produto, TABLE_STG_PRODUTO, job_config=job_config
+    ).result()
+    print(f"OK -> {TABLE_STG_PRODUTO}: {len(df_produto)} linhas")
+
+    client.load_table_from_dataframe(
+        df_vendas, TABLE_STG_VENDAS, job_config=job_config
+    ).result()
+    print(f"OK -> {TABLE_STG_VENDAS}: {len(df_vendas)} linhas")
+
+    print("Carga dos tres CSVs (staging) finalizada com sucesso.")
+
+
+# Orquestra: CSVs locais -> padronizar_colunas + preparar_vendas_para_grafico (extract) -> BQ.
+def main():
+    client = criar_cliente_bq()
+    garantir_conjunto_dados(client, PROJECT_ID, DATASET_ID, BQ_LOCATION)
+
+    df_filial_raw, df_produto_raw, df_vendas_raw = ler_csvs_raw()
+    df_filial, df_produto, df_vendas = padronizar_colunas(
+        df_filial_raw, df_produto_raw, df_vendas_raw
+    )
+    df_vendas = preparar_vendas_para_grafico(df_vendas)
+
+    carregar_tabelas_bigquery(client, df_filial, df_produto, df_vendas)
+
+
+if __name__ == "__main__":
+    main()
