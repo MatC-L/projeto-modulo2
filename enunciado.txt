@@ -1,0 +1,131 @@
+DEVinHouse [Clamed] v4
+Módulo 2 - Projeto Avaliativo
+SUMÁRIO
+1 INTRODUÇÃO	1
+2 REQUISITOS DA APLICAÇÃO	1
+3 ROTEIRO DA APLICAÇÃO	2
+4 CRITÉRIOS DE AVALIAÇÃO	2
+5 ENTREGA	2
+6 PLANO DE PROJETO	3
+
+1 INTRODUÇÃO
+Após o sucesso do MVP (Módulo 1), a empresa CLAMED percebeu que o volume de dados da IQVIA cresceria exponencialmente com a inclusão de novas regiões e meses históricos. O processo manual em Jupyter Notebook tornou-se um gargalo.
+Agora, o desafio é migrar essa estrutura para uma Arquitetura de Dados em Nuvem (Simulada ou Real), utilizando o conceito de Medallion Architecture. Precisamos garantir que o dado seja processado de forma resiliente, versionado em camadas e entregue em um Dashboard de alta performance que permita aos gestores a tomada de decisões em tempo real sobre a competitividade nos Bricks.
+2 REQUISITOS DA APLICAÇÃO
+A aplicação, que deverá ser realizada individualmente deve contemplar os seguintes requisitos:
+Versionamento: Utilizar Git/Github para controle do projeto.
+Python & Pandas: Leitura, limpeza, tratamento de tipos e transformação de dados.
+Opção A: SQL ou PostgreSQL: Modelagem de tabelas e inserção de dados com uso de psycopg2 ou SQLAlchemy para conectar Python ao Banco.
+Opção B: CSV/Sheets: Modelagem das planilhas e limpeza dos dados.
+Análise Exploratória: Uso de Matplotlib/Seaborn/Plotly para validar os dados carregados.
+Dashboards: Utilização gráficos adequados para visualização de KPIs, análises geográficas e detalhamento de informações (tabelas, gráficos de colunas, barras e outras visões adequadas aos padrões de visualização estudados).
+Visualização e Storytelling: Utilização coerente e com agrupamentos relacionados, segmentando a entrega em páginas e setores dentro dos relatórios que possuem conexão entre si. Utilização de títulos é obrigatória e legendas podem ser adicionadas sempre que necessário.
+Interatividade: Implementação de filtros de período, categoria, navegação e segmentação, conforme necessidade e roteiro do trabalho.
+
+3 ROTEIRO DA APLICAÇÃO
+Para desenvolvimento dessa Análise, você deverá utilizar as bases disponíveis em Projeto - Módulo 2 também disponível nesta atividade (AVA).
+1.Infraestrutura e Arquitetura (Cloud & Pipelines)
+Você deve desenhar e implementar a lógica de movimentação de dados dividida em camadas de maturidade.
+Configuração de Ambiente: Configurar um ambiente isolado com Virtualenv que simule um ecossistema Cloud.
+Camadas de Dados (Medallion):
+Bronze (Raw): Armazenamento do arquivo original (Excel) sem alterações. Arquivo original (sem alteração)
+Silver (Trusted): Dados limpos, tipados e padronizados. Dataset tratado (CSV ou tabela)
+Gold (Business): Tabela agregada pronta para o Dashboard (ex: Vendas mensais por Brick e Categoria de Produto). Dataset agregado (CSV, tabela ou view)
+Automação: Criar um script main.py (ou um DAG simples opcional) que orquestre a execução das camadas em ordem.
+2.Engenharia de Dados Avançada (Python + Refatoração)
+Nesta etapa, o foco é qualidade e escalabilidade do código.
+Refatoração para Funções: O código não pode ser um script linear. Deve conter funções como extract_data(), transform_silver(), load_to_postgres().
+Tratamento de Erros (Logging): Implementar a biblioteca logging do Python para registrar o início e fim de cada etapa e capturar erros de conexão com o banco.
+Enriquecimento (Data Join): Cruzar os dados entre as tabelas e desenvolvê-las.
+3.Modelagem de Dados Gold (SQL Analytics)
+No banco escolhido, o aluno deve evoluir o Schema para suportar BI:
+Views de Negócio: Criar uma VIEW, ou guia nova,  chamada vw market share mensal que já traga os cálculos de market share e crescimento mensal (MoM - Month over Month) prontos.
+4.Dashboards 
+Utilizando Looker Studio ou Streamlit, você deverá construir um dashboard seguindo os critérios abaixo:
+KPIs Principais:
+Market Share do negócio (PP) / Total.
+Gap de Preço Médio (Clamed vs. Concorrência).
+Brick com maior potencial de crescimento.
+Visões Obrigatórias:
+Mapa de Calor ou Treemap: Representando o volume de vendas por Brick.
+Linha do Tempo: Evolução das vendas PP vs. Concorrentes nos últimos meses.
+Filtros Dinâmicos: Por Brick, por Mês e por Categoria de Produto.
+4 CRITÉRIOS DE AVALIAÇÃO
+A tabela abaixo apresenta os critérios que serão avaliados durante a correção do projeto. O mesmo possui variação de nota de 0 (zero) a 10 (dez) como nota mínima e máxima, e possui peso de 60% sobre a avaliação do módulo.
+Serão desconsiderados e atribuída a nota 0 (zero) os projetos que apresentarem plágio de soluções encontradas na internet ou de outros colegas. Lembre-se: Você está livre para utilizar outras soluções como base, mas não é permitida a cópia.
+
+Nº
+Critério de Avaliação
+0
+0,5
+1,0
+1
+Documentação, README e clareza da explicação
+Não apresentou documentação funcional e o README não explicou o projeto.
+Apresentou o README com explicações básicas, porém incompletas ou com pouca clareza.
+Apresentou documentação completa, clara, estruturada e com explicações que permitem a execução do projeto por qualquer pessoa.
+
+
+Nº
+Critério de Avaliação
+0
+1,0
+2
+Padronização e tratamento de dados
+Não realizou padronização de colunas, limpeza de tipos ou tratamento de nulos.
+Realizou padronização de colunas (snake_case), tratou tipos e tratou nulos adequadamente.
+3
+Remoção de duplicatas e validação de integridade
+Não removeu duplicidades ou não validou integridade dos dados.
+Removeu duplicatas e aplicou validações de integridade conforme descrito.
+4
+Criação de conexão com banco de dados
+Não criou conexão funcional com a base de dados.
+Criou conexão funcional através de módulo/função dedicada.
+5
+Organização dos scripts do ETL (extract.py / transform.py / load.py)
+Misturou scripts em um único arquivo e não separou claramente as responsabilidades.
+Separou os scripts por etapa, conforme preconizado no ETL, definindo as responsabilidades. 
+6
+Utilização da Ferramenta de BI
+A ferramenta de Bi utilizada não possui técnicas e métodos adequados à proposta de apresentação dos relatórios do projeto
+
+Utilizou a ferramenta de BI que possui técnicas e métodos  mais adequados à proposta de apresentação dos relatórios do projeto
+7
+Construção do dashboard
+O KPI não permitiu a visualização dos indicadores solicitados nos KPIs principais
+Apresentou, pelo menos, os KPIs principais e as visões obrigatórias
+8
+Visualização
+A interface do dashboard não permitiu legibilidade sobre os dados  apresentados 
+A interface possibilitou inferências sobre os dados apresentados.
+9
+Storytelling
+Não apresentou uma conexão clara entre campos e segmentos 
+Construiu um raciocínio conectando as páginas e elementos do relatório
+10
+Interatividade
+O dashboard não permitiu novos insights a partir da aplicação de filtros
+O dashboard apresentou novos insights a partir da aplicação de filtros
+
+
+5 ENTREGA
+O código desenvolvido deverá ser submetido no GitHub, e o link deverá ser disponibilizado na tarefa Módulo 2 - Projeto Avaliativo, presente na semana 12 do AVA até o dia 27/04/2025 às 23h55.
+
+O repositório deverá ser privado, com as seguintes pessoas adicionadas:
+Lucas Ribeiro - limalucassenai
+Operação LAB365 - lab365-operacao
+
+Não serão aceitos projetos submetidos após a data limite da atividade, e, ou alterados depois de entregues.
+
+Importante:
+Será considerado como data final de entrega a última atualização no repositório do projeto no GitHub. Lembre-se de não modificar o código até receber sua nota.
+Não esqueça de submeter submeter o link no AVA.
+
+6 PLANO DE PROJETO
+Ao construir a aplicação proposta, o aluno estará colocando em prática os aprendizados em:
+Versionamento: Uso do GitHub para versionamento de código.
+Banco de Dados: Modelo Relacional, Comandos DDL, Comandos DML, e uso do PostgreSQL.
+Python: Lógica de Programação, Estruturas de controle de fluxo, Estrutura de dados, Documentação de código e Tratamento de Exceções.
+Pandas: Introdução ao Pandas, Limpeza de Dados, Transformações e Visualização com Matplotlib/Seaborn/Plotly.
+Dashboards: Ideação, Criação de KPIs de negócio, Visualizações interativas, Utilização de Filtros dinâmicos e Desenho e organização visual orientada a geração de insights.
