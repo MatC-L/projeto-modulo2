@@ -212,3 +212,34 @@ SELECT
 FROM stats
 CROSS JOIN median
 ;
+
+-- =========================================================
+-- TABELA TEMPORAL DE PARTICIPAÇÃO
+-- =========================================================
+
+CREATE OR REPLACE TABLE `projeto-modulo2.dataset.serie_participacao_tempo` AS
+WITH base AS (
+  SELECT
+    DATE_TRUNC(data_venda, MONTH) AS mes_ref,
+    LOWER(TRIM(empresa)) AS empresa_norm,
+    COALESCE(receita, 0) AS receita
+  FROM `projeto-modulo2.dataset.fact_vendas`
+  WHERE data_venda IS NOT NULL
+),
+agg AS (
+  SELECT
+    mes_ref,
+    SUM(CASE WHEN empresa_norm = 'clamed' THEN receita ELSE 0 END) AS receita_clamed,
+    SUM(CASE WHEN empresa_norm = 'concorrente' THEN receita ELSE 0 END) AS receita_rede,
+    SUM(receita) AS receita_total
+  FROM base
+  GROUP BY mes_ref
+)
+SELECT
+  mes_ref,
+  receita_clamed,
+  receita_rede,
+  SAFE_DIVIDE(receita_clamed, NULLIF(receita_total, 0)) * 100 AS share_clamed_pct,
+  SAFE_DIVIDE(receita_rede, NULLIF(receita_total, 0)) * 100 AS share_rede_pct
+FROM agg
+ORDER BY mes_ref;
